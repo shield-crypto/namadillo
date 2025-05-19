@@ -1,0 +1,11 @@
+{
+	"mainnet": {
+		"namadillo": "namadillo@v1.20.0-hotfix2"
+	},
+	"housefire": {
+		"namadillo": "namadillo@v1.20.2"
+	}
+	"campfire": {
+		"namadillo": "namadillo@v1.20.2"
+	}
+}
