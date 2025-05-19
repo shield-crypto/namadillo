@@ -17,6 +17,7 @@ permissions:
 
 env:
   CHAIN_ID: "namada.5f5de2dd1b88cba30586420"
+  BUILD_TAG: ${{ inputs.build_tag }}
 
 jobs:
   check-and-build:
@@ -27,16 +28,6 @@ jobs:
           echo "Tag: " ${{ inputs.build_tag }}
       - name: Checkout this repository
         uses: actions/checkout@v4
-      - name: Load last processed tag
-        id: load-last-tag
-        run: |
-          if [[ -f .github/last_tag.txt ]]; then
-            LAST_TAG=$(cat .github/last_tag.txt)
-            echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
-          else
-            echo "LAST_TAG=" >> $GITHUB_ENV
-          fi
-          echo "Loaded Last Processed Tag. LAST_TAG=" 
       - name: Clone Namada repository
         uses: actions/checkout@v4
         with:
@@ -48,22 +39,10 @@ jobs:
         id: check-tag
         run: |
           cd source-repo
-          echo "Last Processed Tag. LAST_TAG=" 
-          echo "LAST_TAG=" >> $GITHUB_ENV
-          LATEST_TAG=$(git tag --sort=-creatordate | grep -E '^namadillo@' | head -n 1)
-          echo "Latest tag from Namada: $LATEST_TAG"
-          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
-
-          USER_INPUT_TAG="${{ inputs.build_tag }}"
-          if [[ -n "$USER_INPUT_TAG" ]]; then
-            echo "LATEST_TAG=$USER_INPUT_TAG" >> "$GITHUB_ENV"
-            echo "Using user input tag: $LATEST_TAG"
-          fi
-
           echo "$LATEST_TAG" > ../.github/last_tag.txt
           echo "do_build=true" >> $GITHUB_ENV
-          echo switching to $LATEST_TAG for the build process 
-          git checkout $LATEST_TAG
+          echo switching to $BUILD_TAG for the build process 
+          git checkout $BUILD_TAG
       - name: Restore yarn cache
         uses: actions/cache@v3
         with:
@@ -121,7 +100,7 @@ jobs:
       - name: Check if release exists
         id: check_release
         run: |
-          if gh release view "${{ env.LATEST_TAG }}" > /dev/null 2>&1; then
+          if gh release view "${{ env.BUILD_TAG }}" > /dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
@@ -131,15 +110,15 @@ jobs:
 
       - name: Create release if it doesn't exist
         run: |
-          if ! gh release view ${{ env.LATEST_TAG }} &>/dev/null; then
+          if ! gh release view ${{ env.BUILD_TAG }} &>/dev/null; then
             git config user.name "github-actions"
             git config user.email "github-actions@github.com"
-            git checkout -b ${{ env.LATEST_TAG }}
+            git checkout -b ${{ env.BUILD_TAG }}
             cp -r source-repo/apps/namadillo/dist/* .
             git add .
-            git commit -m "${{ env.LATEST_TAG }} build"
+            git commit -m "${{ env.BUILD_TAG }} build"
             git push --set-upstream origin namadillo@v1.19.0
-            gh release create ${{ env.LATEST_TAG }} --target "${{ env.LATEST_TAG }}" --title "${{ env.LATEST_TAG }}" --notes "Automated release for ${{ env.LATEST_TAG }}"
+            gh release create ${{ env.BUILD_TAG }} --target "${{ env.BUILD_TAG }}" --title "${{ env.BUILD_TAG }}" --notes "Automated release for ${{ env.BUILD_TAG }}"
             git checkout main
           else
             echo "Release ${{ env.LATEST_TAG }} already exists."
